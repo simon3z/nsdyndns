@@ -1,12 +1,22 @@
-# Installing and Upgrading
+# nsdyndnsd
 
-Installing:
+nsdyndnsd is a dynamic DNS update daemon written in Go. It periodically
+determines the external IP address of the host and updates the A record of
+the configured domain with the GoDaddy and/or DigitalOcean API, whenever the
+address has changed.
 
-    $ GO111MODULE=on go get -ldflags="-s -w" github.com/simon3z/nsdyndns/cmd/nsdyndnsd
+The external IP address is detected via api.ipify.org, falling back to
+api.ip.sb and ifconfig.me.
+
+# Installing
+
+Installing from the module:
+
+    $ go install github.com/simon3z/nsdyndns/cmd/nsdyndnsd@latest
 
 Cross-compiling for a Raspberry Pi:
 
-    $ GO111MODULE=on GOARCH=arm GOARM=5 go get -ldflags="-s -w" github.com/simon3z/nsdyndns/cmd/nsdyndnsd
+    $ GOOS=linux GOARCH=arm GOARM=7 go install github.com/simon3z/nsdyndns/cmd/nsdyndnsd@latest
 
 # Usage
 
@@ -16,6 +26,20 @@ Cross-compiling for a Raspberry Pi:
             configuration file path
       -i int
             check interval in seconds (default 300)
+
+Configuration example:
+
+```yaml
+domain: example.com
+host: mysubdomain
+godaddy:
+  key: <godaddy-api-key>
+  secret: <godaddy-api-secret>
+digitalocean:
+  token: <digitalocean-personal-token>
+```
+
+An empty `host` updates the A record of the apex domain.
 
 # Installing as Systemd Service
 

@@ -1,9 +1,11 @@
 [Unit]
-Description=Dynamic DNS Update Tool for GoDaddy
+Description=Dynamic DNS Update Tool for GoDaddy and DigitalOcean
 After=network.target
 
 [Service]
 ExecStart=/usr/local/sbin/nsdyndnsd -c /etc/nsdyndnsd.conf
+Restart=on-failure
+RestartSec=30
 
 [Install]
 WantedBy=multi-user.target

@@ -3,6 +3,7 @@ package cmd
 // cspell:ignore godaddy nsdyndns
 
 import (
+	"errors"
 	"os"
 
 	"github.com/simon3z/nsdyndns"
@@ -39,10 +40,32 @@ func LoadConfiguration(path string) (*Config, error) {
 		return nil, err
 	}
 
+	if err := config.Validate(); err != nil {
+		return nil, err
+	}
+
 	return config, nil
 }
 
+func (c *Config) Validate() error {
+	if c.Domain == "" {
+		return errors.New("configuration: domain must not be empty")
+	}
+
+	if len(c.GetNameServices()) == 0 {
+		return errors.New("configuration: at least one name service (godaddy or digitalocean) must be configured")
+	}
+
+	return nil
+}
+
+// FullDomain returns the fully qualified domain name for the configured
+// host. An empty host refers to the apex domain.
 func (c *Config) FullDomain() string {
+	if c.Host == "" {
+		return c.Domain
+	}
+
 	return c.Host + "." + c.Domain
 }
 

@@ -3,10 +3,15 @@ package main
 // cspell:ignore nsdyndns
 
 import (
+	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/simon3z/nsdyndns"
@@ -15,7 +20,7 @@ import (
 
 var cmdFlags = struct {
 	ConfigFilePath string
-	CheckInterval  int64
+	CheckInterval  int
 }{}
 
 var cmdConfig *cmd.Config
@@ -23,11 +28,13 @@ var cmdServices []*cmd.ConfigNameService
 
 func init() {
 	flag.StringVar(&cmdFlags.ConfigFilePath, "c", "", "configuration file path")
-	flag.Int64Var(&cmdFlags.CheckInterval, "i", 300, "check interval in seconds")
+	flag.IntVar(&cmdFlags.CheckInterval, "i", 300, "check interval in seconds")
 }
 
-func CheckAndUpdate() error {
-	extIP, err := nsdyndns.GetExternalIP()
+// CheckAndUpdate detects a change of the external ip address and updates
+// the configured name services accordingly.
+func CheckAndUpdate(ctx context.Context) error {
+	extIP, err := nsdyndns.GetExternalIP(ctx)
 
 	if err != nil {
 		return err
@@ -36,41 +43,48 @@ func CheckAndUpdate() error {
 	dnsAddrs, err := net.LookupIP(cmdConfig.FullDomain())
 
 	if err != nil {
-		return fmt.Errorf("address lookup for %s.%s failed: %w", cmdConfig.Host, cmdConfig.Domain, err)
+		return fmt.Errorf("address lookup for %s failed: %w", cmdConfig.FullDomain(), err)
 	}
 
-	if len(dnsAddrs) != 1 {
-		return fmt.Errorf("unexpected multiple ip addresses found: %#v", dnsAddrs)
-	}
-
-	if dnsAddrs[0].Equal(extIP) {
-		return nil
+	for _, dnsAddr := range dnsAddrs {
+		if dnsAddr.Equal(extIP) {
+			return nil
+		}
 	}
 
 	log.Printf("new external ip address detected: %s", extIP.String())
 
+	errs := make([]error, 0, len(cmdServices))
+
 	for _, s := range cmdServices {
-		log.Printf("updating %s.%s address from %s to %s using %s", cmdConfig.Host, cmdConfig.Domain, dnsAddrs[0].String(), extIP.String(), s.Name)
+		log.Printf("updating %s address from %s to %s using %s", cmdConfig.FullDomain(), dnsAddrs[0].String(), extIP.String(), s.Name)
 
-		err = s.Service.SetAddress(cmdConfig.Domain, cmdConfig.Host, extIP)
-
-		if err != nil {
-			log.Printf("address of %s.%s update using %s failed: %s", cmdConfig.Host, cmdConfig.Domain, s.Name, err)
+		if err := s.Service.SetAddress(ctx, cmdConfig.Domain, cmdConfig.Host, extIP); err != nil {
+			log.Printf("address of %s update using %s failed: %s", cmdConfig.FullDomain(), s.Name, err)
+			errs = append(errs, fmt.Errorf("%s: %w", s.Name, err))
 		} else {
-			log.Printf("address of %s.%s has been successfully updated to %s using %s", cmdConfig.Host, cmdConfig.Domain, extIP.String(), s.Name)
+			log.Printf("address of %s has been successfully updated to %s using %s", cmdConfig.FullDomain(), extIP.String(), s.Name)
 		}
+	}
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
 	}
 
 	return nil
 }
 
 func main() {
-	log.SetFlags(0)
+	log.SetFlags(log.LstdFlags)
 
 	flag.Parse()
 
 	if cmdFlags.ConfigFilePath == "" {
 		log.Fatalln("configuration file was not specified")
+	}
+
+	if cmdFlags.CheckInterval <= 0 {
+		log.Fatalln("check interval must be a positive number of seconds")
 	}
 
 	var err error
@@ -83,15 +97,26 @@ func main() {
 
 	cmdServices = cmdConfig.GetNameServices()
 
-	log.Printf("starting to monitor external address for %s.%s using %s", cmdConfig.Host, cmdConfig.Domain, nsdyndns.GetExternalIPService())
+	log.Printf("starting to monitor external address for %s using %s", cmdConfig.FullDomain(), nsdyndns.GetExternalIPService())
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+
+	defer stop()
+
+	ticker := time.NewTicker(time.Duration(cmdFlags.CheckInterval) * time.Second)
+
+	defer ticker.Stop()
 
 	for {
-		go func() {
-			if err := CheckAndUpdate(); err != nil {
-				log.Println(err)
-			}
-		}()
+		if err := CheckAndUpdate(ctx); err != nil {
+			log.Println(err)
+		}
 
-		time.Sleep(time.Duration(cmdFlags.CheckInterval) * time.Second)
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			log.Printf("shutting down: %v", ctx.Err())
+			return
+		}
 	}
 }

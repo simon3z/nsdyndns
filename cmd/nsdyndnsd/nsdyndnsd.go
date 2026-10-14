@@ -21,6 +21,7 @@ import (
 var cmdFlags = struct {
 	ConfigFilePath string
 	CheckInterval  int
+	ShowVersion    bool
 }{}
 
 var cmdConfig *cmd.Config
@@ -29,6 +30,7 @@ var cmdServices []*cmd.ConfigNameService
 func init() {
 	flag.StringVar(&cmdFlags.ConfigFilePath, "c", "", "configuration file path")
 	flag.IntVar(&cmdFlags.CheckInterval, "i", 300, "check interval in seconds")
+	flag.BoolVar(&cmdFlags.ShowVersion, "version", false, "print the version and exit")
 }
 
 // CheckAndUpdate detects a change of the external ip address and updates
@@ -79,6 +81,11 @@ func main() {
 
 	flag.Parse()
 
+	if cmdFlags.ShowVersion {
+		fmt.Printf("nsdyndnsd %s\n", nsdyndns.Version)
+		return
+	}
+
 	if cmdFlags.ConfigFilePath == "" {
 		log.Fatalln("configuration file was not specified")
 	}
@@ -97,7 +104,7 @@ func main() {
 
 	cmdServices = cmdConfig.GetNameServices()
 
-	log.Printf("starting to monitor external address for %s using %s", cmdConfig.FullDomain(), nsdyndns.GetExternalIPService())
+	log.Printf("starting nsdyndnsd %s, monitoring external address for %s using %s", nsdyndns.Version, cmdConfig.FullDomain(), nsdyndns.GetExternalIPService())
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 

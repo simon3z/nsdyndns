@@ -3,7 +3,10 @@ Description=Dynamic DNS Update Tool for GoDaddy and DigitalOcean
 After=network.target
 
 [Service]
-ExecStart=/usr/local/sbin/nsdyndnsd -c /etc/nsdyndnsd.conf
+ExecStart=/usr/bin/nsdyndnsd -c /etc/nsdyndnsd.conf
+User=nsdyndns
+Group=nsdyndns
+WorkingDirectory=/var/lib/nsdyndns
 Restart=on-failure
 RestartSec=30
 

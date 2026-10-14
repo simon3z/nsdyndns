@@ -85,6 +85,15 @@ print(" AND ".join(order))
 PY
 }
 
+# Source1: vendored Go modules, regenerated from go.mod/go.sum. The
+# project tree itself stays free of vendor/; it is packed here and
+# removed again afterwards.
+make_vendor_sources() {
+    rm -rf vendor
+    go mod vendor
+    tar cJf "${RPM_TOP}/SOURCES/${NAME}-${VERSION}-vendor.tar.xz" vendor
+}
+
 # Verify the spec's Version:, version.go Version variable, and License:
 # are up to date.
 check_spec() {
@@ -119,10 +128,13 @@ do_sources() {
          "${RPM_TOP}/SRPMS/${NAME}"-*.src.rpm
     cp "$SPEC" "${RPM_TOP}/SPECS/"
     # Source0: archive from HEAD (Fedora-preferred .tar.xz compression).
-    # vendor/ is committed, so the archive is fully self-contained.
     git archive --prefix="${NAME}-${VERSION}/" HEAD | xz -f \
         > "${RPM_TOP}/SOURCES/${NAME}-${VERSION}.tar.xz"
+    # Source1: vendored dependencies; check_spec needs vendor/ present
+    # to derive the cumulative license expression.
+    make_vendor_sources
     check_spec
+    rm -rf vendor
     echo "Sources ready in ${RPM_TOP}/SOURCES:"
     ls -l "${RPM_TOP}/SOURCES"
 }

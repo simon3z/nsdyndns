@@ -11,8 +11,10 @@ Summary:        Dynamic DNS update daemon for GoDaddy and DigitalOcean
 # LICENSE files of the project and the vendored modules.
 License:        Apache-2.0 AND BSD-3-Clause
 URL:            https://github.com/simon3z/nsdyndns
-# Source0: git archive of the project (includes the vendored Go modules)
+# Source0: git archive of the project
+# Source1: vendored Go modules (regenerated at build time from go.mod/go.sum)
 Source0:        %{name}-%{version}.tar.xz
+Source1:        %{name}-%{version}-vendor.tar.xz
 
 ExclusiveArch:  x86_64 aarch64
 BuildRequires:  golang
@@ -24,7 +26,8 @@ domain with the GoDaddy and/or DigitalOcean API, whenever the address has
 changed.
 
 %prep
-%autosetup
+# -a 1: extract the vendor tarball (Source1) on top of Source0
+%autosetup -a 1
 # System user and group for the daemon, defined declaratively so rpm
 # (>= 4.19) creates them from this file during installation.
 cat > nsdyndns-sysusers.conf <<'EOF'

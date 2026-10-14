@@ -3,42 +3,48 @@ package nsdyndns
 // cspell:ignore nsdyndns ipify
 
 import (
+	"context"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
 )
 
-var externalIPServiceURL = url.URL{Scheme: "https", Host: "api.ipify.org"}
+// externalIPServiceURLs are the external IP detection services, in order of
+// preference. Each is tried until one returns a valid IP address.
+var externalIPServiceURLs = []url.URL{
+	{Scheme: "https", Host: "api.ipify.org"},
+	{Scheme: "https", Host: "api.ip.sb", Path: "/ip"},
+	{Scheme: "https", Host: "ifconfig.me", Path: "/ip"},
+}
 
-func GetExternalIP() (net.IP, error) {
-	res, err := http.Get(externalIPServiceURL.String())
+func GetExternalIP(ctx context.Context) (net.IP, error) {
+	var lastErr error
 
-	if err != nil {
-		return nil, err
+	for _, u := range externalIPServiceURLs {
+		body, err := doRequest(ctx, func(ctx context.Context) (*http.Request, error) {
+			return http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+		})
+
+		if err != nil {
+			lastErr = err
+			continue
+		}
+
+		ip := net.ParseIP(strings.TrimSpace(string(body)))
+
+		if ip == nil {
+			lastErr = fmt.Errorf("couldn't parse ip address from %s: %s", u.Host, strings.TrimSpace(string(body)))
+			continue
+		}
+
+		return ip, nil
 	}
 
-	body, err := io.ReadAll(res.Body)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("couldn't retrieve ip address: %s", body)
-	}
-
-	ip := net.ParseIP(strings.TrimSpace(string(body)))
-
-	if ip == nil {
-		return nil, fmt.Errorf("couldn't parse ip address %s", body)
-	}
-
-	return ip, nil
+	return nil, lastErr
 }
 
 func GetExternalIPService() string {
-	return externalIPServiceURL.Host
+	return externalIPServiceURLs[0].Host
 }

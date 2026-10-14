@@ -1,20 +1,20 @@
 package nsdyndns
 
-// cspell:ignore nsdyndns
+// cspell:ignore nsdyndns godaddy
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
-	"strings"
 )
 
 type GoDaddyService struct {
 	Key    string
 	Secret string
+	apiURL string
 }
 
 type HostResponse struct {
@@ -22,45 +22,39 @@ type HostResponse struct {
 	Name string `json:"name"`
 }
 
+const goDaddyDefaultAPIURL = "https://api.godaddy.com/v1"
+
 func NewGoDaddyService(key, secret string) NameService {
-	return &GoDaddyService{key, secret}
+	return &GoDaddyService{Key: key, Secret: secret, apiURL: goDaddyDefaultAPIURL}
 }
 
-func (s *GoDaddyService) SetAddress(domain, host string, address net.IP) error {
-	u := []HostResponse{{Data: address.String()}}
-
-	body := new(bytes.Buffer)
-	json.NewEncoder(body).Encode(u)
-
-	req, err := http.NewRequest("PUT", goDaddyDomainAPIEndpoint(domain, host), body)
+func (s *GoDaddyService) SetAddress(ctx context.Context, domain, host string, address net.IP) error {
+	body, err := json.Marshal([]HostResponse{{Data: address.String()}})
 
 	if err != nil {
 		return err
 	}
 
-	req.Header.Add("Authorization", goDaddyAuthorization(s.Key, s.Secret))
-	req.Header.Add("Content-Type", "application/json")
-	res, err := http.DefaultClient.Do(req)
+	endpoint := fmt.Sprintf("%s/domains/%s/records/A/%s", s.apiURL, domain, recordName(host))
+
+	_, err = doRequest(ctx, func(ctx context.Context) (*http.Request, error) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPut, endpoint, bytes.NewReader(body))
+
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("Authorization", goDaddyAuthorization(s.Key, s.Secret))
+		req.Header.Set("Content-Type", "application/json")
+
+		return req, nil
+	})
 
 	if err != nil {
-		return err
-	}
-
-	resBody, err := io.ReadAll(res.Body)
-
-	if err != nil {
-		return err
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("couldn't update ip address: %s", strings.TrimSpace(string(resBody)))
+		return fmt.Errorf("couldn't update ip address: %w", err)
 	}
 
 	return nil
-}
-
-func goDaddyDomainAPIEndpoint(domain, host string) string {
-	return fmt.Sprintf("https://api.godaddy.com/v1/domains/%s/records/A/%s", domain, host)
 }
 
 func goDaddyAuthorization(key, secret string) string {

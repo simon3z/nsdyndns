@@ -29,7 +29,7 @@ if [ -n "${NSDYNDNS_VERSION:-}" ]; then
 elif last_tag=$(git describe --tags --abbrev=0 2>/dev/null); then
     VERSION="${last_tag#v}"
 else
-    VERSION="$(sed -n 's/^var Version = "\(.*\)$/\1/p' version.go)"
+    VERSION="$(sed -n 's/^var Version = "\(.*\)"$/\1/p' version.go)"
 fi
 
 RPM_TOP="$(pwd)/rpmbuild"
@@ -71,7 +71,7 @@ def spdx(path: Path) -> str:
         return "GPL-3.0-only"
     raise SystemExit(f"ERROR: unrecognized license file {path}")
 
-files = [Path("LICENSE")] + sorted(Path("vendor").glob("*/LICENSE*"))
+files = [Path("LICENSE")] + sorted(Path("vendor").rglob("LICENSE*"))
 out = []
 for f in files:
     for t in atoms(spdx(f)):
@@ -95,7 +95,7 @@ check_spec() {
         echo "Update 'Version:' in $SPEC."
         return 1
     fi
-    gover="$(sed -n 's/^var Version = "\(.*\)$/\1/p' version.go)"
+    gover="$(sed -n 's/^var Version = "\(.*\)"$/\1/p' version.go)"
     if [[ "$gover" != "$VERSION" ]]; then
         echo "ERROR: version.go Version ($gover) does not match $VERSION."
         echo "Update 'Version' in version.go."

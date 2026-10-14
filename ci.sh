@@ -5,7 +5,8 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 echo "--- gofmt ---"
-gofmt -l .
+# Skip vendored third-party code.
+gofmt -l $(find . -name vendor -prune -o -type f -name '*.go' -print)
 
 echo "--- go vet ---"
 go vet ./...

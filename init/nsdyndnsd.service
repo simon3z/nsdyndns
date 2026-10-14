@@ -1,14 +1,39 @@
+# nsdyndnsd Systemd Service
+# Runs the dynamic DNS update daemon as a dedicated system user
+
 [Unit]
 Description=Dynamic DNS Update Tool for GoDaddy and DigitalOcean
-After=network.target
+Documentation=https://github.com/simon3z/nsdyndns
+After=network.target network-online.target
+Wants=network-online.target
 
 [Service]
+Type=simple
 ExecStart=/usr/bin/nsdyndnsd -c /etc/nsdyndnsd.conf
+WorkingDirectory=/var/lib/nsdyndns
 User=nsdyndns
 Group=nsdyndns
-WorkingDirectory=/var/lib/nsdyndns
-Restart=on-failure
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+
+# Restart policy
+Restart=always
 RestartSec=30
+TimeoutStopSec=30
+
+# Resource limits
+MemoryMax=64M
+CPUQuota=100%
+IOWeight=100
 
 [Install]
 WantedBy=multi-user.target

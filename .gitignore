@@ -3,4 +3,8 @@
 
 # Agent instructions (internal to development setup)
 .pi
+
+# Coverage artifacts
+/coverage.out
+/coverage.html
 /vendor

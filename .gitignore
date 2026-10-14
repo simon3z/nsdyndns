@@ -1,2 +1,5 @@
 /nsdyndnsd
 /rpmbuild
+
+# Agent instructions (internal to development setup)
+.pi

@@ -9,7 +9,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/nsdyndnsd -c /etc/nsdyndnsd.conf
+ExecStart=/usr/bin/nsdyndnsd -c /etc/nsdyndnsd/nsdyndnsd.conf
 WorkingDirectory=/var/lib/nsdyndns
 User=nsdyndns
 Group=nsdyndns

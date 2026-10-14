@@ -41,8 +41,9 @@ release):
     # dnf install nsdyndns-*.rpm
 
 This installs the daemon, an example configuration at
-`/etc/nsdyndnsd.conf`, the systemd unit, the `nsdyndns` system user and
-`/var/lib/nsdyndns`.
+`/etc/nsdyndnsd/nsdyndnsd.conf` (readable only by the service user, since
+it holds API credentials), the systemd unit, the `nsdyndns` system user
+and `/var/lib/nsdyndns`.
 
 Installing from the module:
 
@@ -83,23 +84,25 @@ Checkout the repository and build locally:
 
     # go build -o nsdyndnsd ./cmd/nsdyndnsd
 
-Install the nsdyndnsd binary and configuration:
-
-    # cp -vi nsdyndnsd /usr/bin/nsdyndnsd
-    # (umask 077 && cp -vi init/nsdyndnsd.conf /etc/nsdyndnsd.conf)
-
 Create the system user and its home directory:
 
     # useradd -r -s /usr/sbin/nologin -d /var/lib/nsdyndns nsdyndns
     # install -d /var/lib/nsdyndns
 
+Install the nsdyndnsd binary and configuration:
+
+    # cp -vi nsdyndnsd /usr/bin/nsdyndnsd
+    # (umask 077 && mkdir -m 700 -vi /etc/nsdyndnsd)
+    # (umask 077 && cp -vi config/nsdyndnsd.conf /etc/nsdyndnsd/nsdyndnsd.conf)
+    # chown -R nsdyndns:nsdyndns /etc/nsdyndnsd
+
 Edit the configuration file:
 
-    # vim /etc/nsdyndnsd.conf
+    # vim /etc/nsdyndnsd/nsdyndnsd.conf
 
 Install the nsdyndnsd systemd service:
 
-    # cp -vi init/nsdyndnsd.service /etc/systemd/system/nsdyndnsd.service
+    # cp -vi config/nsdyndnsd.service /etc/systemd/system/nsdyndnsd.service
 
 Reload systemd services:
 

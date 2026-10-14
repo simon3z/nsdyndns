@@ -43,9 +43,10 @@ CGO_ENABLED=0 go build -mod=vendor -o nsdyndnsd ./cmd/nsdyndnsd
 
 %install
 install -Dm 0755 nsdyndnsd %{buildroot}%{_bindir}/nsdyndnsd
-# Ship the example config where the unit file expects it (/etc).
-install -Dm 0644 init/nsdyndnsd.conf %{buildroot}/etc/nsdyndnsd.conf
-install -Dm 0644 init/nsdyndnsd.service %{buildroot}/usr/lib/systemd/system/nsdyndnsd.service
+# Ship the example config where the unit file expects it (/etc/<name>).
+# The config contains API credentials, so only the service user reads it.
+install -Dm 0640 config/nsdyndnsd.conf %{buildroot}/etc/nsdyndnsd/nsdyndnsd.conf
+install -Dm 0644 config/nsdyndnsd.service %{buildroot}/usr/lib/systemd/system/nsdyndnsd.service
 # rpm's sysusers handler creates the user but not its home directory
 # (useradd without -m), so package it for the unit's WorkingDirectory.
 install -d %{buildroot}/var/lib/nsdyndns
@@ -70,7 +71,10 @@ go test -mod=vendor ./...
 %license LICENSE
 %doc README.md
 %{_bindir}/nsdyndnsd
-%config(noreplace) /etc/nsdyndnsd.conf
+# Directory restricted to the service user: the config inside holds API
+# credentials.
+%attr(0700,nsdyndns,nsdyndns) %dir /etc/nsdyndnsd
+%config(noreplace) %attr(0640,nsdyndns,nsdyndns) /etc/nsdyndnsd/nsdyndnsd.conf
 /usr/lib/systemd/system/nsdyndnsd.service
 %dir /var/lib/nsdyndns
 %{_sysusersdir}/%{name}.conf

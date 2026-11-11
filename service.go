@@ -5,6 +5,8 @@ import (
 	"net"
 )
 
+// NameService abstracts a DNS provider that can set the A record for a
+// domain's host to the given address.
 type NameService interface {
 	SetAddress(ctx context.Context, domain, host string, address net.IP) error
 }

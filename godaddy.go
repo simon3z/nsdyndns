@@ -11,12 +11,14 @@ import (
 	"net/http"
 )
 
+// GoDaddyService implements NameService using the GoDaddy DNS API.
 type GoDaddyService struct {
 	Key    string
 	Secret string
 	apiURL string
 }
 
+// HostResponse is the JSON body of the GoDaddy record update request.
 type HostResponse struct {
 	Data string `json:"data"`
 	Name string `json:"name"`
@@ -24,6 +26,7 @@ type HostResponse struct {
 
 const goDaddyDefaultAPIURL = "https://api.godaddy.com/v1"
 
+// NewGoDaddyService returns a NameService backed by the GoDaddy API.
 func NewGoDaddyService(key, secret string) NameService {
 	return &GoDaddyService{Key: key, Secret: secret, apiURL: goDaddyDefaultAPIURL}
 }

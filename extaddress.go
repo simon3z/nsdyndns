@@ -19,6 +19,8 @@ var externalIPServiceURLs = []url.URL{
 	{Scheme: "https", Host: "ifconfig.me", Path: "/ip"},
 }
 
+// GetExternalIP determines the host's external IP address by querying the
+// configured IP detection services in order until one succeeds.
 func GetExternalIP(ctx context.Context) (net.IP, error) {
 	var lastErr error
 
@@ -45,6 +47,8 @@ func GetExternalIP(ctx context.Context) (net.IP, error) {
 	return nil, lastErr
 }
 
+// GetExternalIPService returns the host of the preferred external IP
+// detection service, for logging purposes.
 func GetExternalIPService() string {
 	return externalIPServiceURLs[0].Host
 }

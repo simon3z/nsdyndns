@@ -12,11 +12,13 @@ import (
 	"net/http"
 )
 
+// DigitalOceanService implements NameService using the DigitalOcean DNS API.
 type DigitalOceanService struct {
 	Token  string
 	apiURL string
 }
 
+// DomainRecord is the DigitalOcean API representation of a DNS record.
 type DomainRecord struct {
 	Id   int64  `json:"id"`
 	Type string `json:"type"`
@@ -27,12 +29,17 @@ type DomainRecord struct {
 
 const (
 	digitalOceanDefaultAPIURL = "https://api.digitalocean.com/v2"
-	DigitalOceanDefaultTtl    = 60
+
+	// DigitalOceanDefaultTtl is the TTL (in seconds) applied to managed
+	// A records.
+	DigitalOceanDefaultTtl = 60
 )
 
 // ErrRecordNotFound indicates that no matching domain record exists.
 var ErrRecordNotFound = errors.New("domain record not found")
 
+// NewDigitalOceanService returns a NameService backed by the DigitalOcean
+// API.
 func NewDigitalOceanService(token string) NameService {
 	return &DigitalOceanService{Token: token, apiURL: digitalOceanDefaultAPIURL}
 }

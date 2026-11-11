@@ -24,9 +24,6 @@ var cmdFlags = struct {
 	ShowVersion    bool
 }{}
 
-var cmdConfig *cmd.Config
-var cmdServices []*cmd.ConfigNameService
-
 func init() {
 	flag.StringVar(&cmdFlags.ConfigFilePath, "c", "", "configuration file path")
 	flag.IntVar(&cmdFlags.CheckInterval, "i", 300, "check interval in seconds")
@@ -34,18 +31,20 @@ func init() {
 }
 
 // CheckAndUpdate detects a change of the external ip address and updates
-// the configured name services accordingly.
-func CheckAndUpdate(ctx context.Context) error {
-	extIP, err := nsdyndns.GetExternalIP(ctx)
+// the given name services accordingly. The ip and dns lookup functions
+// are injectable so the orchestration is unit-testable without network
+// access.
+func CheckAndUpdate(ctx context.Context, config *cmd.Config, services []*cmd.ConfigNameService, ipFetcher func(context.Context) (net.IP, error), dnsLookup func(string) ([]net.IP, error)) error {
+	extIP, err := ipFetcher(ctx)
 
 	if err != nil {
 		return err
 	}
 
-	dnsAddrs, err := net.LookupIP(cmdConfig.FullDomain())
+	dnsAddrs, err := dnsLookup(config.FullDomain())
 
 	if err != nil {
-		return fmt.Errorf("address lookup for %s failed: %w", cmdConfig.FullDomain(), err)
+		return fmt.Errorf("address lookup for %s failed: %w", config.FullDomain(), err)
 	}
 
 	for _, dnsAddr := range dnsAddrs {
@@ -56,16 +55,16 @@ func CheckAndUpdate(ctx context.Context) error {
 
 	log.Printf("new external ip address detected: %s", extIP.String())
 
-	errs := make([]error, 0, len(cmdServices))
+	errs := make([]error, 0, len(services))
 
-	for _, s := range cmdServices {
-		log.Printf("updating %s address from %s to %s using %s", cmdConfig.FullDomain(), dnsAddrs[0].String(), extIP.String(), s.Name)
+	for _, s := range services {
+		log.Printf("updating %s address from %s to %s using %s", config.FullDomain(), dnsAddrs[0].String(), extIP.String(), s.Name)
 
-		if err := s.Service.SetAddress(ctx, cmdConfig.Domain, cmdConfig.Host, extIP); err != nil {
-			log.Printf("address of %s update using %s failed: %s", cmdConfig.FullDomain(), s.Name, err)
+		if err := s.Service.SetAddress(ctx, config.Domain, config.Host, extIP); err != nil {
+			log.Printf("address of %s update using %s failed: %s", config.FullDomain(), s.Name, err)
 			errs = append(errs, fmt.Errorf("%s: %w", s.Name, err))
 		} else {
-			log.Printf("address of %s has been successfully updated to %s using %s", cmdConfig.FullDomain(), extIP.String(), s.Name)
+			log.Printf("address of %s has been successfully updated to %s using %s", config.FullDomain(), extIP.String(), s.Name)
 		}
 	}
 
@@ -94,17 +93,15 @@ func main() {
 		log.Fatalln("check interval must be a positive number of seconds")
 	}
 
-	var err error
-
-	cmdConfig, err = cmd.LoadConfiguration(cmdFlags.ConfigFilePath)
+	config, err := cmd.LoadConfiguration(cmdFlags.ConfigFilePath)
 
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	cmdServices = cmdConfig.GetNameServices()
+	services := config.GetNameServices()
 
-	log.Printf("starting nsdyndnsd %s, monitoring external address for %s using %s", nsdyndns.Version, cmdConfig.FullDomain(), nsdyndns.GetExternalIPService())
+	log.Printf("starting nsdyndnsd %s, monitoring external address for %s using %s", nsdyndns.Version, config.FullDomain(), nsdyndns.GetExternalIPService())
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 
@@ -115,7 +112,7 @@ func main() {
 	defer ticker.Stop()
 
 	for {
-		if err := CheckAndUpdate(ctx); err != nil {
+		if err := CheckAndUpdate(ctx, config, services, nsdyndns.GetExternalIP, net.LookupIP); err != nil {
 			log.Println(err)
 		}
 

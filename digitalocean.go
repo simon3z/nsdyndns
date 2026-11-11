@@ -44,7 +44,8 @@ func NewDigitalOceanService(token string) NameService {
 	return &DigitalOceanService{Token: token, apiURL: digitalOceanDefaultAPIURL}
 }
 
-func (s *DigitalOceanService) doRequest(ctx context.Context, method, path string, body []byte) ([]byte, error) {
+// doJSON performs a JSON API call against the DigitalOcean API.
+func (s *DigitalOceanService) doJSON(ctx context.Context, method, path string, body []byte) ([]byte, error) {
 	return doRequest(ctx, func(ctx context.Context) (*http.Request, error) {
 		req, err := http.NewRequestWithContext(ctx, method, s.apiURL+"/"+path, bytes.NewReader(body))
 
@@ -65,7 +66,7 @@ func (s *DigitalOceanService) findRecordId(ctx context.Context, domain, host str
 	page := 1
 
 	for {
-		body, err := s.doRequest(ctx, http.MethodGet, fmt.Sprintf("domains/%s/records?per_page=200&page=%d", domain, page), nil)
+		body, err := s.doJSON(ctx, http.MethodGet, fmt.Sprintf("domains/%s/records?per_page=200&page=%d", domain, page), nil)
 
 		if err != nil {
 			return 0, fmt.Errorf("couldn't list domain records: %w", err)
@@ -114,21 +115,26 @@ func (s *DigitalOceanService) SetAddress(ctx context.Context, domain, host strin
 
 	id, err := s.findRecordId(ctx, domain, host)
 
-	if errors.Is(err, ErrRecordNotFound) {
-		_, err := s.doRequest(ctx, http.MethodPost, fmt.Sprintf("domains/%s/records", domain), body)
+	switch {
+	case errors.Is(err, ErrRecordNotFound):
+		_, err := s.doJSON(ctx, http.MethodPost, fmt.Sprintf("domains/%s/records", domain), body)
 
 		if err != nil {
 			return fmt.Errorf("couldn't create ip address: %w", err)
 		}
 
 		return nil
-	}
-
-	if err != nil {
+	case err != nil:
 		return err
+	default:
+		return s.updateRecord(ctx, domain, id, body, address)
 	}
+}
 
-	resBody, err := s.doRequest(ctx, http.MethodPut, fmt.Sprintf("domains/%s/records/%d", domain, id), body)
+// updateRecord PUTs the record and verifies that the API actually applied
+// the requested data and ttl.
+func (s *DigitalOceanService) updateRecord(ctx context.Context, domain string, id int64, body []byte, address net.IP) error {
+	resBody, err := s.doJSON(ctx, http.MethodPut, fmt.Sprintf("domains/%s/records/%d", domain, id), body)
 
 	if err != nil {
 		return fmt.Errorf("couldn't update ip address: %w", err)

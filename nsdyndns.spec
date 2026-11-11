@@ -1,7 +1,7 @@
 %bcond_without check
 
 Name:           nsdyndns
-Version:        0.1.0
+Version:        0.1.1
 # Release: computed by rpm-build.sh (--define release N = commits since
 # the last tag + 1); defaults to 1 when release is not defined.
 Release:        %{?release}%{!?release:1}%{?dist}
@@ -80,5 +80,8 @@ go test -mod=vendor ./...
 %{_sysusersdir}/%{name}.conf
 
 %changelog
+* Wed Nov 11 2026 Federico Simoncelli <federico.simoncelli@gmail.com> - 0.1.1-%{?release}%{!?release:1}
+- New release
+
 * Wed Oct 14 2026 Federico Simoncelli <federico.simoncelli@gmail.com> - 0.1.0-%{?release}%{!?release:1}
 - Initial package release

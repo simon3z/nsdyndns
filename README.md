@@ -10,7 +10,7 @@
 
 [badge-github]: https://img.shields.io/badge/github-simon3z/nsdyndns-6f57b0.svg?logo=github
 [badge-license]: https://img.shields.io/badge/license-Apache-2.0-blue.svg
-[badge-version]: https://img.shields.io/badge/version-0.1.0-ff8000.svg
+[badge-version]: https://img.shields.io/badge/version-0.1.1-ff8000.svg
 [badge-go]: https://img.shields.io/badge/go-1.21-00ADD8.svg?logo=go
 [badge-deps]: https://img.shields.io/badge/dependencies-1-green.svg
 [badge-tests]: https://img.shields.io/badge/tests-passing-brightgreen.svg

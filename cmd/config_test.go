@@ -92,6 +92,19 @@ host: sub
 	}
 }
 
+// Regression: a half-configured godaddy pair is rejected at load time.
+func TestLoadConfigurationGodaddyPartialCredentials(t *testing.T) {
+	path := writeConfig(t, `
+domain: example.com
+godaddy:
+  key: k
+`)
+
+	if _, err := LoadConfiguration(path); err == nil {
+		t.Fatal("expected error for godaddy with key but no secret")
+	}
+}
+
 func TestLoadConfigurationMissingFile(t *testing.T) {
 	if _, err := LoadConfiguration("/nonexistent/config.yaml"); err == nil {
 		t.Fatal("expected error for missing file")

@@ -10,6 +10,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Config holds the nsdyndnsd configuration: the domain to manage, the host
+// (subdomain, or apex when empty), and credentials for the name services.
 type Config struct {
 	Domain  string `yaml:"domain"`
 	Host    string `yaml:"host"`
@@ -22,6 +24,7 @@ type Config struct {
 	}
 }
 
+// LoadConfiguration reads and validates the YAML configuration at path.
 func LoadConfiguration(path string) (*Config, error) {
 	f, err := os.Open(path)
 
@@ -56,6 +59,15 @@ func (c *Config) Validate() error {
 		return errors.New("configuration: at least one name service (godaddy or digitalocean) must be configured")
 	}
 
+	// Require both credentials, since a half-configured godaddy pair would
+	// only fail at runtime with an opaque API error.
+	hasKey := c.GoDaddy.Key != ""
+	hasSecret := c.GoDaddy.Secret != ""
+
+	if hasKey != hasSecret {
+		return errors.New("configuration: godaddy requires both a key and a secret")
+	}
+
 	return nil
 }
 
@@ -69,6 +81,7 @@ func (c *Config) FullDomain() string {
 	return c.Host + "." + c.Domain
 }
 
+// ConfigNameService pairs a name service with its display name.
 type ConfigNameService struct {
 	Name    string
 	Service nsdyndns.NameService

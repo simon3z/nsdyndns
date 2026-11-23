@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/simon3z/nsdyndns"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // Config holds the nsdyndnsd configuration: the domain to manage, the host

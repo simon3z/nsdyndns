@@ -18,6 +18,7 @@ Source1:        %{name}-%{version}-vendor.tar.xz
 
 ExclusiveArch:  x86_64 aarch64
 BuildRequires:  golang
+BuildRequires:  systemd-rpm-macros
 
 %description
 nsdyndnsd is a dynamic DNS update daemon. It periodically determines the
@@ -81,10 +82,10 @@ go test -mod=vendor ./...
 
 %changelog
 * Mon Nov 23 2026 Federico Simoncelli <federico.simoncelli@gmail.com> - 0.1.2-%{?release}%{!?release:1}
-- Migrate to gopkg.in/yaml.v3
+- Updated to upstream 0.1.2
 
 * Wed Nov 11 2026 Federico Simoncelli <federico.simoncelli@gmail.com> - 0.1.1-%{?release}%{!?release:1}
-- New release
+- Updated to upstream 0.1.1
 
 * Wed Oct 14 2026 Federico Simoncelli <federico.simoncelli@gmail.com> - 0.1.0-%{?release}%{!?release:1}
-- Initial package release
+- Updated to upstream 0.1.0

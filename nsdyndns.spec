@@ -1,7 +1,7 @@
 %bcond_without check
 
 Name:           nsdyndns
-Version:        0.1.1
+Version:        0.1.2
 # Release: computed by rpm-build.sh (--define release N = commits since
 # the last tag + 1); defaults to 1 when release is not defined.
 Release:        %{?release}%{!?release:1}%{?dist}
@@ -80,6 +80,9 @@ go test -mod=vendor ./...
 %{_sysusersdir}/%{name}.conf
 
 %changelog
+* Mon Nov 23 2026 Federico Simoncelli <federico.simoncelli@gmail.com> - 0.1.2-%{?release}%{!?release:1}
+- Migrate to gopkg.in/yaml.v3
+
 * Wed Nov 11 2026 Federico Simoncelli <federico.simoncelli@gmail.com> - 0.1.1-%{?release}%{!?release:1}
 - New release
 

@@ -7,4 +7,4 @@ package nsdyndns
 //
 // The release tooling (rpm-build.sh) keeps this in sync with the
 // release version, falling back to git tags.
-var Version = "0.1.1"
+var Version = "0.1.2"

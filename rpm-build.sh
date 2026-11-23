@@ -53,33 +53,40 @@ license_expression() {
 import re
 from pathlib import Path
 
-def atoms(l):
-    l = l.replace("(", " ").replace(")", " ")
-    return [t.strip() for t in re.split(r"\s+(?:OR|AND)\s+", l) if t.strip()]
-
-def spdx(path: Path) -> str:
-    text = path.read_text(errors="replace")
+def spdx(path: Path) -> list:
+    """All SPDX licenses a single LICENSE file declares; one file may cover
+    different parts of a module under different licenses (yaml.v3 is MIT
+    for the files ported from libyaml, Apache-2.0 for the rest)."""
+    # Collapse whitespace so license phrases spanning line wraps match.
+    text = re.sub(r"\s+", " ", path.read_text(errors="replace"))
+    found = []
     if "Apache License, Version 2.0" in text:
-        return "Apache-2.0"
+        found.append("Apache-2.0")
     if "Redistribution and use in source and binary forms" in text:
-        return "BSD-2-Clause"
+        found.append("BSD-2-Clause")
     if "Permission is hereby granted, free of charge, to any person" in text:
-        return "BSD-3-Clause"
-    if "MIT License" in text and "Permission is hereby granted" in text:
-        return "MIT"
+        # MIT and BSD-3 share that phrase; MIT's condition sentence is the
+        # "above copyright notice" line, which BSD-3 does not have.
+        if "The above copyright notice and this permission notice shall be " \
+                "included in all copies" in text:
+            found.append("MIT")
+        else:
+            found.append("BSD-3-Clause")
     if re.search(r"GNU\s+GENERAL\s+PUBLIC\s+LICENSE", text) and "Version 3" in text:
-        return "GPL-3.0-only"
-    raise SystemExit(f"ERROR: unrecognized license file {path}")
+        found.append("GPL-3.0-only")
+    if not found:
+        raise SystemExit(f"ERROR: unrecognized license file {path}")
+    return found
 
 files = [Path("LICENSE")] + sorted(Path("vendor").rglob("LICENSE*"))
 out = []
 for f in files:
-    for t in atoms(spdx(f)):
+    for t in spdx(f):
         if t not in out:
             out.append(t)
 
 # Project license first, rest sorted.
-order = [t for t in atoms(spdx(files[0])) if t in out]
+order = [t for t in spdx(files[0]) if t in out]
 order += sorted(t for t in out if t not in order)
 print(" AND ".join(order))
 PY

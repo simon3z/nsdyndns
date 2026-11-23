@@ -9,7 +9,7 @@ Summary:        Dynamic DNS update daemon for GoDaddy and DigitalOcean
 # Cumulative SPDX expression (project AND union of all vendored module
 # licenses); verified by rpm-build.sh (license_expression) against the
 # LICENSE files of the project and the vendored modules.
-License:        Apache-2.0 AND BSD-3-Clause
+License:        Apache-2.0 AND MIT
 URL:            https://github.com/simon3z/nsdyndns
 # Source0: git archive of the project
 # Source1: vendored Go modules (regenerated at build time from go.mod/go.sum)
